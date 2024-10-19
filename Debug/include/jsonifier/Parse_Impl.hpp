@@ -268,10 +268,6 @@ namespace jsonifier_internal {
 							}
 							return;
 						};
-						if (context.iter + wsSize >= context.endIter) {
-							--context.currentObjectDepth;
-							return;
-						};
 						if (whitespaceTable[static_cast<uint8_t>(*(context.iter + wsSize))]) {
 							if constexpr (options.knownOrder) {
 								if (antihash) {

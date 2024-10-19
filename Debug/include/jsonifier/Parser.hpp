@@ -118,7 +118,6 @@ namespace jsonifier_internal {
 			}
 			parse<options.minified, optionsNew>::impl(object, context);
 			while (context.iter < context.endIter) {
-				std::cout << "CURRENT VALUES: " << context.iter << std::endl;
 				++context.iter;
 				static constexpr auto sourceLocation{ std::source_location::current() };
 				if (!derailleur<options, parse_context<derived_type>>::skipToNextValue(context)) {
@@ -159,7 +158,6 @@ namespace jsonifier_internal {
 			}
 			parse<options.minified, optionsNew>::impl(object, context);
 			while (context.iter < context.endIter) {
-				std::cout << "CURRENT VALUES: " << context.iter << std::endl;
 				++context.iter;
 				static constexpr auto sourceLocation{ std::source_location::current() };
 				if (!derailleur<options, parse_context<derived_type>>::skipToNextValue(context)) {
