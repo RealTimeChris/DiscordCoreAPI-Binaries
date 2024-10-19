@@ -994,12 +994,20 @@ namespace jsonifier_internal {
 					}
 					break;
 				}
+				case '}': {
+					++context.iter;
+					return true;
+				}
 				case '[': {
 					++context.currentArrayDepth;
 					if (!skipArray(context)) {
 						return false;
 					}
 					break;
+				}
+				case ']': {
+					++context.iter;
+					return true;
 				}
 				case '"': {
 					skipString(context);
@@ -1044,15 +1052,30 @@ namespace jsonifier_internal {
 					break;
 				}
 				case 'n': {
-					context.iter += 4;
+					++context.iter;
+					if JSONIFIER_LIKELY ((compareStringAsInt<"ull">(context.iter))) {
+						context.iter += 3;
+					} else {
+						return false;
+					}
 					break;
 				}
 				case 'f': {
-					context.iter += 5;
+					++context.iter;
+					if JSONIFIER_LIKELY ((compareStringAsInt<"alse">(context.iter))) {
+						context.iter += 4;
+					} else {
+						return false;
+					}
 					break;
 				}
 				case 't': {
-					context.iter += 4;
+					++context.iter;
+					if JSONIFIER_LIKELY ((compareStringAsInt<"rue">(context.iter))) {
+						context.iter += 3;
+					} else {
+						return false;
+					}
 					break;
 				}
 				case '0':
