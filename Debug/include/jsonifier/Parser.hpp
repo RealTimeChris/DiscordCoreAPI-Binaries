@@ -60,7 +60,10 @@ namespace jsonifier_internal {
 	};
 
 	template<jsonifier::concepts::pointer_t value_type> const char* getEndIter(value_type value) {
-		return reinterpret_cast<const char*>(char_comparison<'\0'>::memchar(value, std::numeric_limits<size_t>::max()));
+		while (*value != '\0') {
+			++value;
+		}
+		return value;
 	}
 
 	template<jsonifier::concepts::pointer_t value_type> const char* getBeginIter(value_type value) {
@@ -98,7 +101,7 @@ namespace jsonifier_internal {
 			context.endIter			   = getEndIter(in);
 			context.currentObjectDepth = 0;
 			context.currentArrayDepth  = 0;
-			auto newSize	  = static_cast<uint64_t>((context.endIter - context.iter) / 2);
+			auto newSize			   = static_cast<uint64_t>((context.endIter - context.iter) / 2);
 			if (stringBuffer.size() < newSize) {
 				stringBuffer.resize(newSize);
 			}
@@ -115,6 +118,7 @@ namespace jsonifier_internal {
 			}
 			parse<options.minified, optionsNew>::impl(object, context);
 			while (context.iter < context.endIter) {
+				std::cout << "CURRENT VALUES: " << context.iter << std::endl;
 				++context.iter;
 				static constexpr auto sourceLocation{ std::source_location::current() };
 				if (!derailleur<options, parse_context<derived_type>>::skipToNextValue(context)) {
@@ -137,7 +141,7 @@ namespace jsonifier_internal {
 			context.endIter			   = getEndIter(in);
 			context.currentObjectDepth = 0;
 			context.currentArrayDepth  = 0;
-			auto newSize	  = static_cast<uint64_t>((context.endIter - context.iter) / 2);
+			auto newSize			   = static_cast<uint64_t>((context.endIter - context.iter) / 2);
 			if (stringBuffer.size() < newSize) {
 				stringBuffer.resize(newSize);
 			}
@@ -155,6 +159,7 @@ namespace jsonifier_internal {
 			}
 			parse<options.minified, optionsNew>::impl(object, context);
 			while (context.iter < context.endIter) {
+				std::cout << "CURRENT VALUES: " << context.iter << std::endl;
 				++context.iter;
 				static constexpr auto sourceLocation{ std::source_location::current() };
 				if (!derailleur<options, parse_context<derived_type>>::skipToNextValue(context)) {
