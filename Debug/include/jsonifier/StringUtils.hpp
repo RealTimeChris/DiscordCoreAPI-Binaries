@@ -36,6 +36,11 @@ namespace jsonifier_internal {
 		++context.iter; \
 	}
 
+#define CHECK_FOR_END(iter) \
+	if (iter >= context.endIter) { \
+		return; \
+	}
+
 	template<typename iterator01, typename iterator02> JSONIFIER_ALWAYS_INLINE void skipMatchingWs(iterator01 wsStart, iterator02& context, uint64_t length) noexcept {
 		if (length > 7) {
 			uint64_t v[2];
@@ -205,24 +210,25 @@ namespace jsonifier_internal {
 
 	// Taken from simdjson: https://github.com/simdjson/simdjson
 	template<typename iterator_type01, typename iterator_type02> JSONIFIER_ALWAYS_INLINE bool handleUnicodeCodePoint(iterator_type01& srcPtr, iterator_type02& dstPtr) noexcept {
-		static constexpr uint32_t substitutionCodePoint = 0xFffd;
-		uint32_t codePoint								= hexToU32NoCheck(srcPtr + 2);
+		static constexpr uint32_t substitutionCodePoint = 0xfffd;
+		uint32_t codePoint = hexToU32NoCheck(srcPtr + 2);
 		srcPtr += 6;
-		if (codePoint >= 0xD800 && codePoint < 0xDc00) {
-			if (((srcPtr[0] << 8) | srcPtr[1]) != ((static_cast<uint8_t>('\\') << 8) | static_cast<uint8_t>('u'))) {
+
+		if (codePoint >= 0xd800 && codePoint < 0xdc00) {
+			const auto* srcData = srcPtr;
+			if (((srcData[0] << 8) | srcData[1]) != ((static_cast<uint8_t>('\\') << 8) | static_cast<uint8_t>('u'))) {
 				codePoint = substitutionCodePoint;
 			} else {
-				uint32_t codePoint2 = hexToU32NoCheck(srcPtr + 2);
-
-				uint32_t lowBit = codePoint2 - 0xDc00;
+				uint32_t codePoint2 = hexToU32NoCheck(srcData + 2);
+				uint32_t lowBit	 = codePoint2 - 0xdc00;
 				if (lowBit >> 10) {
 					codePoint = substitutionCodePoint;
 				} else {
-					codePoint = (((codePoint - 0xD800) << 10) | lowBit) + 0x10000;
+					codePoint = (((codePoint - 0xd800) << 10) | lowBit) + 0x10000;
 					srcPtr += 6;
 				}
 			}
-		} else if (codePoint >= 0xDc00 && codePoint <= 0xDfff) {
+		} else if (codePoint >= 0xdc00 && codePoint <= 0xdfff) {
 			codePoint = substitutionCodePoint;
 		}
 		size_t offset = codePointToUtf8(codePoint, dstPtr);
@@ -763,14 +769,15 @@ namespace jsonifier_internal {
 	}
 
 	template<string_literal string, typename char_type> JSONIFIER_ALWAYS_INLINE bool compareStringAsInt(const char_type* context) noexcept {
-		static constexpr auto newString{ getStringAsInt<char_type, string>() };
-		if constexpr (string.size() % 2 == 0) {
-			convert_length_to_int_t<string.size()> newerString;
-			std::memcpy(&newerString, context, string.size());
+		JSONIFIER_ALIGN static constexpr jsonifier_internal::string_literal stringNew{ string };
+		static constexpr auto newString{ getStringAsInt<char_type, stringNew>() };
+		if constexpr (stringNew.size() % 2 == 0) {
+			convert_length_to_int_t<stringNew.size()> newerString;
+			std::memcpy(&newerString, context, stringNew.size());
 			return newString == newerString;
 		} else {
-			convert_length_to_int_t<string.size()> newerString{};
-			std::memcpy(&newerString, context, string.size());
+			convert_length_to_int_t<stringNew.size()> newerString{};
+			std::memcpy(&newerString, context, stringNew.size());
 			return newString == newerString;
 		}
 	}
@@ -860,7 +867,11 @@ namespace jsonifier_internal {
 		JSONIFIER_INLINE static bool skipObject(context_type& context) noexcept {
 			++context.iter;
 			if constexpr (!options.minified) {
-				JSONIFIER_SKIP_WS();
+				if (context.iter < context.endIter) {
+					JSONIFIER_SKIP_WS();
+				} else {
+					return false;
+				}
 			}
 			if (*context.iter == '}') {
 				++context.iter;
@@ -870,9 +881,13 @@ namespace jsonifier_internal {
 				if (*context.iter != '"') {
 					return false;
 				}
-				skipString(context.iter, context.endIter);
+				skipString(context);
 				if constexpr (!options.minified) {
-					JSONIFIER_SKIP_WS();
+					if (context.iter < context.endIter) {
+						JSONIFIER_SKIP_WS();
+					} else {
+						return false;
+					}
 				}
 				if (*context.iter != ':') {
 					return false;
@@ -880,19 +895,31 @@ namespace jsonifier_internal {
 					++context.iter;
 				}
 				if constexpr (!options.minified) {
-					JSONIFIER_SKIP_WS();
+					if (context.iter < context.endIter) {
+						JSONIFIER_SKIP_WS();
+					} else {
+						return false;
+					}
 				}
-				if (!skipToNextValue(context.iter, context.endIter)) {
+				if (!skipToNextValue(context)) {
 					return false;
 				}
 				if constexpr (!options.minified) {
-					JSONIFIER_SKIP_WS();
+					if (context.iter < context.endIter) {
+						JSONIFIER_SKIP_WS();
+					} else {
+						return false;
+					}
 				}
 				if (*context.iter != ',')
 					break;
 				++context.iter;
 				if constexpr (!options.minified) {
-					JSONIFIER_SKIP_WS();
+					if (context.iter < context.endIter) {
+						JSONIFIER_SKIP_WS();
+					} else {
+						return false;
+					}
 				}
 			}
 			if (*context.iter == '}') {
@@ -906,24 +933,40 @@ namespace jsonifier_internal {
 		JSONIFIER_INLINE static bool skipArray(context_type& context) noexcept {
 			++context.iter;
 			if constexpr (!options.minified) {
-				JSONIFIER_SKIP_WS();
+				if (context.iter < context.endIter) {
+					JSONIFIER_SKIP_WS();
+				} else {
+					return false;
+				}
 			}
 			if (*context.iter == ']') {
 				++context.iter;
 				return true;
 			}
 			while (true) {
-				if (!skipToNextValue(context.iter, context.endIter)) {
+				if (!skipToNextValue(context)) {
 					return false;
 				}
 				if constexpr (!options.minified) {
-					JSONIFIER_SKIP_WS();
+					if (context.iter < context.endIter) {
+						JSONIFIER_SKIP_WS();
+					} else {
+						return false;
+					}
 				}
-				if (*context.iter != ',')
-					break;
+				if (context.iter < context.endIter) {
+					if (*context.iter != ',')
+						break;
+				} else {
+					return false;
+				}
 				++context.iter;
 				if constexpr (!options.minified) {
-					JSONIFIER_SKIP_WS();
+					if (context.iter < context.endIter) {
+						JSONIFIER_SKIP_WS();
+					} else {
+						return false;
+					}
 				}
 			}
 			if (*context.iter == ']') {
@@ -1110,7 +1153,9 @@ namespace jsonifier_internal {
 
 		JSONIFIER_INLINE static bool skipToNextValue(context_type& context) noexcept {
 			if constexpr (!options.minified) {
-				JSONIFIER_SKIP_WS();
+				if (context.iter < context.endIter) {
+					JSONIFIER_SKIP_WS();
+				}
 			}
 			switch (*context.iter) {
 				case '{': {
@@ -1118,7 +1163,9 @@ namespace jsonifier_internal {
 						return false;
 					}
 					if constexpr (!options.minified) {
-						JSONIFIER_SKIP_WS();
+						if (context.iter < context.endIter) {
+							JSONIFIER_SKIP_WS();
+						}
 					}
 					break;
 				}
@@ -1127,22 +1174,30 @@ namespace jsonifier_internal {
 						return false;
 					}
 					if constexpr (!options.minified) {
-						JSONIFIER_SKIP_WS();
+						if (context.iter < context.endIter) {
+							JSONIFIER_SKIP_WS();
+						}
 					}
 					break;
 				}
 				case '"': {
 					skipString(context);
 					if constexpr (!options.minified) {
-						JSONIFIER_SKIP_WS();
-					}
-					if (*context.iter == ':') {
-						++context.iter;
-						if constexpr (!options.minified) {
+						if (context.iter < context.endIter) {
 							JSONIFIER_SKIP_WS();
 						}
-						if (!skipToNextValue(context)) {
-							return false;
+					}
+					if (context.iter < context.endIter) {
+						if (*context.iter == ':') {
+							++context.iter;
+							if constexpr (!options.minified) {
+								if (context.iter < context.endIter) {
+									JSONIFIER_SKIP_WS();
+								}
+							}
+							if (!skipToNextValue(context)) {
+								return false;
+							}
 						}
 					}
 					break;
@@ -1150,7 +1205,9 @@ namespace jsonifier_internal {
 				case ':': {
 					++context.iter;
 					if constexpr (!options.minified) {
-						JSONIFIER_SKIP_WS();
+						if (context.iter < context.endIter) {
+							JSONIFIER_SKIP_WS();
+						}
 					}
 					if (!skipToNextValue(context)) {
 						return false;
@@ -1160,21 +1217,27 @@ namespace jsonifier_internal {
 				case 'n': {
 					context.iter += 4;
 					if constexpr (!options.minified) {
-						JSONIFIER_SKIP_WS();
+						if (context.iter < context.endIter) {
+							JSONIFIER_SKIP_WS();
+						}
 					}
 					break;
 				}
 				case 'f': {
 					context.iter += 5;
 					if constexpr (!options.minified) {
-						JSONIFIER_SKIP_WS();
+						if (context.iter < context.endIter) {
+							JSONIFIER_SKIP_WS();
+						}
 					}
 					break;
 				}
 				case 't': {
 					context.iter += 4;
 					if constexpr (!options.minified) {
-						JSONIFIER_SKIP_WS();
+						if (context.iter < context.endIter) {
+							JSONIFIER_SKIP_WS();
+						}
 					}
 					break;
 				}
