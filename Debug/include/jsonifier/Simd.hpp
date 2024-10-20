@@ -196,7 +196,7 @@ namespace jsonifier_internal {
 				newPtr[6] = simd_internal::gatherValuesU<jsonifier_simd_int_t>(values + (bytesPerStep * 6));
 				newPtr[7] = simd_internal::gatherValuesU<jsonifier_simd_int_t>(values + (bytesPerStep * 7));
 			}
-			prefetchStringValues(values + bitsPerStep);
+			//prefetchStringValues(values + bitsPerStep);
 		}
 
 		template<bool collectAligned, bool minified> JSONIFIER_ALWAYS_INLINE simd_internal::simd_int_t_holder getRawIndices(string_view_ptr values) noexcept {

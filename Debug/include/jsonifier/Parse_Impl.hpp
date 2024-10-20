@@ -102,6 +102,8 @@ namespace jsonifier_internal {
 							jsonifier::string_view key{ static_cast<const char*>(context.iter) + 1, keySize };
 							auto& keys = value.jsonifierExcludedKeys;
 							if JSONIFIER_LIKELY ((keys.find(static_cast<typename std::remove_cvref_t<decltype(keys)>::key_type>(key)) != keys.end())) {
+								derailleur<options, parse_context_type>::skipKey(context);
+								++context.iter;
 								derailleur<options, parse_context_type>::skipToNextValue(context);
 							}
 						}
@@ -114,6 +116,8 @@ namespace jsonifier_internal {
 								if JSONIFIER_LIKELY ((arrayOfPtrs[index](value, context))) {
 								}
 								JSONIFIER_UNLIKELY(else) {
+									derailleur<options, parse_context_type>::skipKey(context);
+									++context.iter;
 									derailleur<options, parse_context_type>::skipToNextValue(context);
 								}
 							} else {
@@ -169,6 +173,8 @@ namespace jsonifier_internal {
 									JSONIFIER_UNLIKELY(else) {
 										static constexpr auto sourceLocation{ std::source_location::current() };
 										context.parserPtr->template reportError<sourceLocation, parse_errors::Missing_Comma_Or_Object_End>(context);
+										derailleur<options, parse_context_type>::skipKey(context);
+										++context.iter;
 										derailleur<options, parse_context_type>::skipToNextValue(context);
 										return;
 									}
@@ -178,6 +184,8 @@ namespace jsonifier_internal {
 										jsonifier::string_view key{ static_cast<const char*>(context.iter) + 1, keySize };
 										auto& keys = value.jsonifierExcludedKeys;
 										if JSONIFIER_LIKELY ((keys.find(static_cast<typename std::remove_cvref_t<decltype(keys)>::key_type>(key)) != keys.end())) {
+											derailleur<options, parse_context_type>::skipKey(context);
+											++context.iter;
 											derailleur<options, parse_context_type>::skipToNextValue(context);
 											return;
 										}
@@ -216,10 +224,12 @@ namespace jsonifier_internal {
 																 indexNew < memberCount)) {
 											static constexpr auto arrayOfPtrs = generateFunctionPtrs<false, options, value_type, parse_context_type>();
 											if JSONIFIER_LIKELY ((arrayOfPtrs[indexNew](value, context))) {
-												return parseLambda(std::integral_constant<size_t, index + 1>{}, std::integral_constant<bool, newLines>{},
+												return parseLambda(std::integral_constant<size_t, index>{}, std::integral_constant<bool, newLines>{},
 													std::integral_constant<bool, false>{}, parseLambda, value, context, wsStart, wsSize);
 											}
 											JSONIFIER_UNLIKELY(else) {
+												derailleur<options, parse_context_type>::skipKey(context);
+												++context.iter;
 												derailleur<options, parse_context_type>::skipToNextValue(context);
 												return;
 											}
@@ -295,6 +305,8 @@ namespace jsonifier_internal {
 							jsonifier::string_view key{ static_cast<const char*>(context.iter) + 1, keySize };
 							auto& keys = value.jsonifierExcludedKeys;
 							if JSONIFIER_LIKELY ((keys.find(static_cast<typename std::remove_cvref_t<decltype(keys)>::key_type>(key)) != keys.end())) {
+								derailleur<options, parse_context_type>::skipKey(context);
+								++context.iter;
 								derailleur<options, parse_context_type>::skipToNextValue(context);
 							}
 						}
@@ -328,6 +340,8 @@ namespace jsonifier_internal {
 									if JSONIFIER_LIKELY ((arrayOfPtrs[index](value, context))) {
 									}
 									JSONIFIER_UNLIKELY(else) {
+										derailleur<options, parse_context_type>::skipKey(context);
+										++context.iter;
 										derailleur<options, parse_context_type>::skipToNextValue(context);
 									}
 								} else {
@@ -352,6 +366,8 @@ namespace jsonifier_internal {
 									JSONIFIER_UNLIKELY(else) {
 										static constexpr auto sourceLocation{ std::source_location::current() };
 										context.parserPtr->template reportError<sourceLocation, parse_errors::Missing_Comma_Or_Object_End>(context);
+										derailleur<options, parse_context_type>::skipKey(context);
+										++context.iter;
 										derailleur<options, parse_context_type>::skipToNextValue(context);
 										return;
 									}
@@ -361,6 +377,8 @@ namespace jsonifier_internal {
 										jsonifier::string_view key{ static_cast<const char*>(context.iter) + 1, keySize };
 										auto& keys = value.jsonifierExcludedKeys;
 										if JSONIFIER_LIKELY ((keys.find(static_cast<typename std::remove_cvref_t<decltype(keys)>::key_type>(key)) != keys.end())) {
+											derailleur<options, parse_context_type>::skipKey(context);
+											++context.iter;
 											derailleur<options, parse_context_type>::skipToNextValue(context);
 											return;
 										}
@@ -397,9 +415,11 @@ namespace jsonifier_internal {
 																 indexNew < memberCount)) {
 											static constexpr auto arrayOfPtrs = generateFunctionPtrs<true, options, value_type, parse_context_type>();
 											if JSONIFIER_LIKELY ((arrayOfPtrs[indexNew](value, context))) {
-												return parseLambda(std::integral_constant<size_t, index + 1>{}, std::integral_constant<bool, false>{}, parseLambda, value, context);
+												return parseLambda(std::integral_constant<size_t, index>{}, std::integral_constant<bool, false>{}, parseLambda, value, context);
 											}
 											JSONIFIER_UNLIKELY(else) {
+												derailleur<options, parse_context_type>::skipKey(context);
+												++context.iter;
 												derailleur<options, parse_context_type>::skipToNextValue(context);
 												return;
 											}
@@ -992,8 +1012,8 @@ namespace jsonifier_internal {
 	template<bool minified, jsonifier::parse_options options, jsonifier::concepts::variant_t value_type, typename parse_context_type>
 	struct parse_impl<minified, options, value_type, parse_context_type> {
 		JSONIFIER_ALWAYS_INLINE static void impl(value_type& value, parse_context_type& context) noexcept {
-			static constexpr auto lambda = [](auto&& valueNew, auto&& value, auto&& context) {
-				return parse<minified, options>::impl(valueNew, context);
+			static constexpr auto lambda = [](auto&& valueNewer, auto&& context) {
+				parse<minified, options>::impl(valueNewer, context);
 			};
 			visit<lambda>(value, context);
 		}
