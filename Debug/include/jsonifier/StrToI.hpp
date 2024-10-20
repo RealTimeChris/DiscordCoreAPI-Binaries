@@ -543,7 +543,7 @@ namespace jsonifier_internal {
 
 			if JSONIFIER_LIKELY ((isDigit(numTmp))) {
 				if (negative) {
-					if (value > static_cast<uint64_t>(rawCompValsNeg<value_type>[numTmp])) {
+					if (static_cast<uint64_t>(value) > static_cast<uint64_t>(rawCompValsNeg<value_type>[numTmp])) {
 						return nullptr;
 					} else {
 						value = static_cast<uint64_t>(value) * 10 + static_cast<uint64_t>(numTmp - zero);
@@ -551,7 +551,7 @@ namespace jsonifier_internal {
 						numTmp = *iter;
 					}
 				} else {
-					if (value > rawCompValsPos<value_type>[numTmp]) {
+					if (static_cast<uint64_t>(value) > rawCompValsPos<value_type>[numTmp]) {
 						return nullptr;
 					} else {
 						value = static_cast<uint64_t>(value) * 10 + static_cast<uint64_t>(numTmp - zero);

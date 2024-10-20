@@ -268,7 +268,7 @@ namespace jsonifier_internal {
 							}
 							return;
 						};
-						if (whitespaceTable[static_cast<uint8_t>(*(context.iter + wsSize))]) {
+						if (context.iter + wsSize < context.endIter && whitespaceTable[static_cast<uint8_t>(*(context.iter + wsSize))]) {
 							if constexpr (options.knownOrder) {
 								if (antihash) {
 									parseLambda(std::integral_constant<size_t, 1>{}, std::integral_constant<bool, true>{}, std::integral_constant<bool, true>{}, parseLambda, value,

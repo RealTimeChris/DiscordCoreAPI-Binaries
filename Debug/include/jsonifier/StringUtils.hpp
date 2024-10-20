@@ -275,6 +275,20 @@ namespace jsonifier_internal {
 			simd_internal::opCmpEq(simd_internal::opShuffle(simdValues02, simdValue), simdValue)));
 	}
 
+	template<jsonifier::concepts::unsigned_type simd_type, jsonifier::concepts::unsigned_type integer_type>
+	JSONIFIER_ALWAYS_INLINE integer_type copyAndFindSerialize(const char* string1, char* string2, simd_type& simdValue) noexcept {
+		static constexpr integer_type mask{ repeatByte<0b01111111, integer_type>() };
+		static constexpr integer_type lowBitsMask{ repeatByte<0b10000000, integer_type>() };
+		static constexpr integer_type midBitsMask{ repeatByte<0b01100000, integer_type>() };
+		static constexpr integer_type quoteBits{ repeatByte<'"', integer_type>() };
+		static constexpr integer_type bsBits{ repeatByte<'\\', integer_type>() };
+		std::memcpy(string2, string1, sizeof(simd_type));
+		std::memcpy(&simdValue, string1, sizeof(simd_type));
+		const size_t lo7  = simdValue & mask;
+		const size_t next = ~((((lo7 ^ quoteBits) + mask) & ((lo7 ^ bsBits) + mask) & ((simdValue & midBitsMask) + mask)) | simdValue) & lowBitsMask;
+		return static_cast<integer_type>(simd_internal::tzcnt(next) >> 3u);
+	}
+
 	template<typename iterator_type01> JSONIFIER_ALWAYS_INLINE static void skipStringImpl(iterator_type01& string1, size_t& lengthNew) noexcept {
 		auto endIter = string1 + lengthNew;
 		while (string1 < endIter) {
@@ -709,19 +723,10 @@ namespace jsonifier_internal {
 			using simd_type						   = typename get_type_at_index<simd_internal::avx_integer_list, 0>::type::type;
 			static constexpr size_t bytesProcessed = get_type_at_index<simd_internal::avx_integer_list, 0>::type::bytesProcessed;
 			static constexpr integer_type mask	   = get_type_at_index<simd_internal::avx_integer_list, 0>::type::mask;
-			static constexpr integer_type maskNew{ repeatByte<0b01111111, integer_type>() };
-			static constexpr integer_type lowBitsMask{ repeatByte<0b10000000, integer_type>() };
-			static constexpr integer_type midBitsMask{ repeatByte<0b01100000, integer_type>() };
-			static constexpr integer_type quoteBits{ repeatByte<'"', integer_type>() };
-			static constexpr integer_type bsBits{ repeatByte<'\\', integer_type>() };
 			simd_type simdValue;
 			integer_type nextEscapeable;
 			while (static_cast<int64_t>(lengthNew) >= static_cast<int64_t>(bytesProcessed)) {
-				std::memcpy(string2, string1, sizeof(simd_type));
-				std::memcpy(&simdValue, string1, sizeof(simd_type));
-				const size_t lo7  = simdValue & maskNew;
-				const size_t next = ~((((lo7 ^ quoteBits) + maskNew) & ((lo7 ^ bsBits) + maskNew) & ((simdValue & midBitsMask) + maskNew)) | simdValue) & lowBitsMask;
-				nextEscapeable	  = static_cast<integer_type>(simd_internal::tzcnt(next) >> 3u);
+				nextEscapeable = copyAndFindSerialize<simd_type, integer_type>(string1, string2, simdValue);
 				if JSONIFIER_LIKELY ((nextEscapeable < mask)) {
 					escapeChar = escapeTable[static_cast<uint8_t>(string1[nextEscapeable])];
 					if JSONIFIER_LIKELY ((escapeChar != 0u)) {
@@ -764,7 +769,7 @@ namespace jsonifier_internal {
 	}
 
 	template<string_literal string, typename char_type> JSONIFIER_ALWAYS_INLINE bool compareStringAsInt(const char_type* context) noexcept {
-		JSONIFIER_ALIGN static constexpr jsonifier_internal::string_literal stringNew{ string };
+		static constexpr jsonifier_internal::string_literal stringNew{ string };
 		static constexpr auto newString{ getStringAsInt<char_type, stringNew>() };
 		if constexpr (stringNew.size() % 2 == 0) {
 			convert_length_to_int_t<stringNew.size()> newerString;

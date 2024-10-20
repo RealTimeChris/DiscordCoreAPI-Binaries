@@ -451,7 +451,9 @@ namespace jsonifier_internal {
 					writer<options>::writeCharacters(buffer, serializePair.index, R"(\\)");
 					break;
 				}
-				[[likely]] default: { writer<options>::writeCharacter(buffer, serializePair.index, value); }
+					[[likely]] default : {
+						writer<options>::writeCharacter(buffer, serializePair.index, value);
+					}
 			}
 			writer<options>::template writeCharacter<'"'>(buffer, serializePair.index);
 		}
@@ -521,23 +523,14 @@ namespace jsonifier_internal {
 				buffer.resize((serializePair.index + additionalSize) * 2);
 			}
 			if constexpr (sizeof(value_type) == 8) {
-				if constexpr (jsonifier::concepts::unsigned_type<value_type>) {
-					serializePair.index = static_cast<size_t>(toChars(buffer.data() + serializePair.index, value) - buffer.data());
-				} else if constexpr (jsonifier::concepts::signed_type<value_type>) {
-					serializePair.index = static_cast<size_t>(toChars(buffer.data() + serializePair.index, value) - buffer.data());
-				} else {
-					serializePair.index = static_cast<size_t>(toChars(buffer.data() + serializePair.index, value) - buffer.data());
-				}
+				serializePair.index = static_cast<size_t>(toChars(buffer.data() + serializePair.index, value) - buffer.data());
 			} else {
 				if constexpr (jsonifier::concepts::unsigned_type<value_type>) {
-					auto newValue		= static_cast<uint64_t>(value);
-					serializePair.index = static_cast<size_t>(toChars(buffer.data() + serializePair.index, newValue) - buffer.data());
+					serializePair.index = static_cast<size_t>(toChars(buffer.data() + serializePair.index, static_cast<uint64_t>(value)) - buffer.data());
 				} else if constexpr (jsonifier::concepts::signed_type<value_type>) {
-					auto newValue		= static_cast<int64_t>(value);
-					serializePair.index = static_cast<size_t>(toChars(buffer.data() + serializePair.index, newValue) - buffer.data());
+					serializePair.index = static_cast<size_t>(toChars(buffer.data() + serializePair.index, static_cast<int64_t>(value)) - buffer.data());
 				} else {
-					auto newValue		= static_cast<double>(value);
-					serializePair.index = static_cast<size_t>(toChars(buffer.data() + serializePair.index, newValue) - buffer.data());
+					serializePair.index = static_cast<size_t>(toChars(buffer.data() + serializePair.index, static_cast<double>(value)) - buffer.data());
 				}
 			}
 		}
