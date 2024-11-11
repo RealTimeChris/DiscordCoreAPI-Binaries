@@ -52,8 +52,6 @@ namespace jsonifier_internal {
 
 	template<template<typename...> class value_type, typename... arg_types> constexpr bool is_specialization_v<value_type<arg_types...>, value_type> = true;
 
-	template<uint64_t index> using tag = std::integral_constant<uint64_t, index>;
-
 	template<uint64_t bytesProcessedNew, typename simd_type, typename integer_type_new, integer_type_new maskNew> struct type_holder {
 		static constexpr uint64_t bytesProcessed{ bytesProcessedNew };
 		static constexpr integer_type_new mask{ maskNew };

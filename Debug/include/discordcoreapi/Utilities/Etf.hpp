@@ -480,7 +480,7 @@ namespace discord_core_api {
 			DCA_INLINE etf_serializer() = default;
 
 			DCA_INLINE etf_serializer& operator=(etf_serializer&& data) noexcept {
-				stringReal = std::move(data.stringReal);
+				stringReal.swap(data.stringReal);
 				value.swap(data.value);
 				return *this;
 			}
@@ -490,39 +490,7 @@ namespace discord_core_api {
 			}
 
 			DCA_INLINE etf_serializer& operator=(const etf_serializer& data) {
-				switch (data.getType()) {
-					case json_type::object_t: {
-						value = data.getObject();
-						break;
-					}
-					case json_type::array_t: {
-						value = data.getArray();
-						break;
-					}
-					case json_type::string_t: {
-						value = data.getString();
-						break;
-					}
-					case json_type::float_t: {
-						value = data.getFloat();
-						break;
-					}
-					case json_type::uint_t: {
-						value = data.getUint();
-						break;
-					}
-					case json_type::int_t: {
-						value = data.getInt();
-						break;
-					}
-					case json_type::bool_t: {
-						value = data.getBool();
-						break;
-					}
-					case json_type::null_t: {
-						break;
-					}
-				}
+				value	   = data.value;
 				stringReal = data.stringReal;
 				return *this;
 			}
@@ -731,7 +699,6 @@ namespace discord_core_api {
 					return false;
 				}
 				return value == rhs.value;
-				return true;
 			}
 
 			DCA_INLINE object_type& getObject() {
