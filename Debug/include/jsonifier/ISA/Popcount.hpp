@@ -27,17 +27,17 @@
 
 namespace simd_internal {
 
-#if defined(JSONIFIER_POPCNT) || defined(JSONIFIER_ANY_AVX)
+#if JSONIFIER_CHECK_FOR_INSTRUCTION(JSONIFIER_POPCNT) || JSONIFIER_CHECK_FOR_INSTRUCTION(JSONIFIER_ANY_AVX)
 
 	#define popcnt(value) _mm_popcnt_u64(value)
 
-#elif defined(JSONIFIER_NEON)
+#elif JSONIFIER_CHECK_FOR_INSTRUCTION(JSONIFIER_NEON)
 
-	#define popcnt(value) vaddv_u8(vcnt_u8(vcreate_u8(value)))
+	#define popcnt(value) __builtin_popcountll(value)
 
 #else
 
-	template<jsonifier::concepts::unsigned_type value_type> JSONIFIER_ALWAYS_INLINE value_type popcnt(value_type value) noexcept {
+	template<jsonifier::concepts::unsigned_t value_type> JSONIFIER_ALWAYS_INLINE value_type popcnt(value_type value) noexcept {
 		value_type count{};
 
 		while (value > 0) {

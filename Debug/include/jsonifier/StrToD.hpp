@@ -29,8 +29,8 @@ namespace jsonifier_internal {
 
 	template<typename T, typename UC> constexpr bool parseFloat(UC const*& iter, UC const* end, T& value) noexcept {
 		using namespace fast_float;
-		static_assert(is_supported_float_type<T>(), "only some floating-point types are supported");
-		static_assert(is_supported_char_type<UC>(), "only char, wchar_t, char16_t and char32_t are supported");
+		static_assert(is_supported_float_t<T>(), "only some floating-point types are supported");
+		static_assert(is_supported_char_t<UC>(), "only char, wchar_t, char16_t and char32_t are supported");
 
 		static constexpr UC decimalNew = '.';
 		static constexpr UC smallE	   = 'e';
@@ -46,7 +46,7 @@ namespace jsonifier_internal {
 		if (answer.negative) {
 			++iter;
 
-			if JSONIFIER_UNLIKELY ((!is_integer(*iter))) {
+			if JSONIFIER_UNLIKELY (!is_integer(*iter)) {
 				return false;
 			}
 		}
@@ -61,7 +61,8 @@ namespace jsonifier_internal {
 
 		UC const* const end_of_integer_part = iter;
 		int64_t digit_count					= static_cast<int64_t>(end_of_integer_part - start_digits);
-		answer.integer						= fast_float::span<const UC>(start_digits, static_cast<size_t>(digit_count));
+		answer.integer.length				= static_cast<size_t>(digit_count);
+		answer.integer.ptr					= start_digits;
 
 		if (digit_count == 0 || (start_digits[0] == zeroNew && digit_count > 1)) {
 			return false;
@@ -81,8 +82,9 @@ namespace jsonifier_internal {
 				++iter;
 				i = i * 10 + digit;
 			}
-			exponent		= before - iter;
-			answer.fraction = fast_float::span<const UC>(before, static_cast<size_t>(iter - before));
+			exponent			   = before - iter;
+			answer.fraction.length = static_cast<size_t>(iter - before);
+			answer.fraction.ptr	   = before;
 			digit_count -= exponent;
 		}
 
@@ -156,7 +158,7 @@ namespace jsonifier_internal {
 		}
 		answer.exponent = exponent;
 		answer.mantissa = i;
-		if JSONIFIER_LIKELY ((answer.valid)) {
+		if JSONIFIER_LIKELY (answer.valid) {
 			iter = answer.lastmatch;
 			return from_chars_advanced(answer, value).ptr != nullptr;
 		} else {
